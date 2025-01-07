@@ -52,17 +52,17 @@
             gap: 20px;
             width: 100%;
         }
-        @media screen and (max-width: 768px) {
-            .controls-row {
-                flex-direction: column;
-            }
-            #chartContainer {
-                width: 100%;
-                height: 70vh;
-            }
-            .main-controls {
-                flex-direction: column;
-            }
+        .trading-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #currentPrice {
+            font-size: 24px;
+            font-weight: bold;
+            min-width: 120px;
+            text-align: right;
         }
         
         #stockChart {
@@ -70,18 +70,6 @@
             height: 100%;
         }
 
-        #currentPrice {
-            font-size: 24px;
-            font-weight: bold;
-            min-width: 120px;
-            text-align: right;
-        }
-
-        .trading-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
 
         .trading-button {
             padding: 10px 20px;
@@ -99,12 +87,12 @@
         }
 
         #buyButton {
-            background-color: #00ff00;
-            color: black;
+            background-color: #28a745;
+            color: white;
         }
 
         #sellButton {
-            background-color: #ff0000;
+            background-color: #dc3545;
             color: white;
         }
 
@@ -116,6 +104,42 @@
         #cashPosition {
             font-size: 18px;
             min-width: 150px;
+        }
+
+        
+        @media screen and (max-width: 768px) {
+            .controls-row {
+                flex-direction: column;
+            }
+            #chartContainer {
+                width: 100%;
+                height: 70vh;
+            }
+            .main-controls {
+                flex-direction: column;
+            }
+            .trading-controls {
+                flex-direction: column;
+                text-align: left;
+                width: 100%;
+                align-items: flex-start;
+            }
+            .controls-row {
+                padding: 0;
+                padding-top: 10px;
+            }
+            #currentPrice {
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                z-index: 1000;
+            }
+            body {
+                padding: 0;
+                display: flex;
+                flex-direction: column-reverse;
+            }
+            
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -204,7 +228,7 @@
         function updateCashPosition() {
             const cashDisplay = document.getElementById('cashPosition');
             cashDisplay.textContent = `Cash: $${cashBalance.toFixed(2)}`;
-            cashDisplay.style.color = cashBalance >= 1000 ? '#00ff00' : '#ffffff';
+            // cashDisplay.style.color = cashBalance >= 1000 ? '#00ff00' : '#ffffff';
             updateButtonStates();
         }
 
@@ -223,7 +247,9 @@
             // Random price movement between -2% and +2%
             const priceChangeFactor = stock === 'BITCOIN' ? 0.20 : 0.04;
             const changePercent = (Math.random() - 0.5) * priceChangeFactor;
-            const newPrice = stockData[stock].currentPrice * (1 + changePercent);
+            const meanReversionFactor = 0.1; // Adjust this factor to control mean reversion strength
+            const meanPrice = stockData[stock].startPrice;
+            const newPrice = stockData[stock].currentPrice * (1 + changePercent) + meanReversionFactor * (meanPrice - stockData[stock].currentPrice);
             stockData[stock].currentPrice = newPrice;
             
             stockData[stock].history.push(newPrice);
@@ -309,8 +335,9 @@
                 chart.data.datasets[0].fill = isPositive ? true : 'origin';
                 chart.data.datasets[0].backgroundColor = createGradient(ctx, isPositive);
                 chart.data.datasets[1].data = Array(data.history.length).fill(data.startPrice);
-                chart.options.scales.y.min = Math.min(...data.history, data.startPrice);
-                chart.options.scales.y.max = Math.max(...data.history, data.startPrice);
+                const recentHistory = data.history.slice(-50);
+                chart.options.scales.y.min = Math.min(...recentHistory, data.startPrice);
+                chart.options.scales.y.max = Math.max(...recentHistory, data.startPrice);
                 chart.update();
             }
         }
