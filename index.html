@@ -22,6 +22,8 @@
             width: 95%;
             padding: 20px;
         }
+
+        
         
         #stockSelect {
             padding: 10px;
@@ -43,6 +45,24 @@
             padding: 20px 0px;
             margin-bottom: 20px;
             position: relative;
+        }
+
+        .main-controls {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+        }
+        @media screen and (max-width: 768px) {
+            .controls-row {
+                flex-direction: column;
+            }
+            #chartContainer {
+                width: 100%;
+                height: 70vh;
+            }
+            .main-controls {
+                flex-direction: column;
+            }
         }
         
         #stockChart {
@@ -99,20 +119,26 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer data-domain="dumbtrading.com" src="https://plausible.io/js/script.js"></script>
 </head>
 <body>
     <div class="controls-row">
-        <div style="display: flex; gap: 20px; width: 100%;">
+        <div  class="main-controls" >
+            <div style="display: flex; gap: 5px; width: 100%;">   
             <select id="stockSelect">
                 <option value="AAPL">Apple (AAPL)</option>
                 <option value="GOOGL">Google (GOOGL)</option>
                 <option value="MSFT">Microsoft (MSFT)</option>
                 <option value="AMZN">Amazon (AMZN)</option>
+                <option value="BITCOIN">Bitcoin (BTC)</option>
             </select>
-            
-            <div class="trading-controls">
+            <div style="display: flex; direction: row; gap: 5px; width: 100%;">
                 <button id="buyButton" class="trading-button">Buy</button>
                 <button id="sellButton" class="trading-button">Sell</button>
+        </div>
+            </div>
+            
+            <div class="trading-controls">
                 <div id="portfolio">
                     Shares: 0 | P/L: $0.00
                 </div>
@@ -145,11 +171,11 @@
         function createGradient(ctx, isPositive) {
             const gradient = ctx.createLinearGradient(0, 0, 0, 400);
             if (isPositive) {
-                gradient.addColorStop(0, 'rgba(0, 255, 0, 1)');
-                gradient.addColorStop(1, 'rgba(0, 255, 0, 0.1)');
+                gradient.addColorStop(0, 'rgba(0, 255, 0, 0.7)');
+                gradient.addColorStop(1, 'rgba(0, 255, 0, 0.0)');
             } else {
-                gradient.addColorStop(0, 'rgba(255, 0, 0, 1)');
-                gradient.addColorStop(1, 'rgba(255, 0, 0, 0.1)');
+                gradient.addColorStop(0, 'rgba(255, 0, 0, 0.7)');
+                gradient.addColorStop(1, 'rgba(255, 0, 0, 0.0)');
             }
             return gradient;
         }
@@ -229,10 +255,10 @@
                             data: data.history,
                             borderColor: isPositive ? '#00ff00' : '#ff0000',
                             borderWidth: 2,
-                            fill: true,
+                            fill: isPositive ? true : 'origin',
                             backgroundColor: createGradient(ctx, isPositive),
                             tension: 0.4,
-                            pointRadius: 0 // This removes the dots
+                            pointRadius: 0 
                         },
                         {
                             label: 'Starting Price',
@@ -280,6 +306,8 @@
             } else {
                 chart.data.datasets[0].data = data.history;
                 chart.data.datasets[0].borderColor = isPositive ? '#00ff00' : '#ff0000';
+                chart.data.datasets[0].fill = isPositive ? true : 'origin';
+                chart.data.datasets[0].backgroundColor = createGradient(ctx, isPositive);
                 chart.data.datasets[1].data = Array(data.history.length).fill(data.startPrice);
                 chart.options.scales.y.min = Math.min(...data.history, data.startPrice);
                 chart.options.scales.y.max = Math.max(...data.history, data.startPrice);
