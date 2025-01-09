@@ -119,6 +119,15 @@
             font-size: 18px;
             min-width: 150px;
         }
+
+        .popup  {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(220, 53, 69, 0.9);
+
+        }
         @keyframes popupFade {
             0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
             10% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
@@ -175,6 +184,9 @@
             .trading-button {
                 padding: 12px 24px;
             }
+            .popup {
+                text-align: left;
+            }
             
         }
     </style>
@@ -188,7 +200,7 @@
             <select id="stockSelect">
                 <option value="AAPL">Apple (AAPL)</option>
                 <option value="GOOGL">Google (GOOGL)</option>
-                <option value="MSFT">Microsoft (MSFT)</option>
+                <option value="TSLA">Tesla (TSLA)</option>
                 <option value="AMZN">Amazon (AMZN)</option>
                 <option value="BITCOIN">Bitcoin (BTC)</option>
             </select>
@@ -242,15 +254,21 @@
             return gradient;
         }
 
-
         let cashBalance = 1000; // Starting cash position
         let leverage = 1;
         let leverageUnlocked = false;
+        let optionsUnlocked = false;
+        let marginCallCount = 0;
 
         // Initialize history arrays
         Object.keys(stockData).forEach(stock => {
-            stockData[stock].startPrice = stockData[stock].currentPrice;
-            stockData[stock].history = Array(50).fill(stockData[stock].currentPrice );
+            const data = stockData[stock];
+            data.startPrice = data.currentPrice;
+            
+            // initialize random up and down moves around the start price
+            data.history = Array(50).fill(0).map((_, i) => {
+                return data.startPrice * (Math.random() < 0.5 ? 1 + (Math.random() * 0.001) : 1 - (Math.random() * 0.001));
+            });
         });
 
         let chart;
@@ -263,6 +281,45 @@
                 updateCashPosition();
             }
         }
+
+        function checkForOptionsUnlock() {
+            if (!optionsUnlocked && cashBalance >= 50000) {
+                optionsUnlocked = true;
+                showOptionsUnlockPopup();
+                addOptionsToDropdown();
+            }
+        }
+
+        function showOptionsUnlockPopup() {
+            const popup = document.createElement('div');
+            popup.innerHTML = '50X RETURN - VOLATILITY INCREASED';
+            popup.classList.add('popup');
+            popup.style.cssText = `
+                color: white;
+                padding: 20px 40px;
+                border-radius: 8px;
+                font-size: 24px;
+                font-weight: bold;
+                text-align: center;
+                animation: popupFade 3s forwards, textFlash 0.5s linear infinite;
+                z-index: 1000;
+            `;
+
+            document.body.appendChild(popup);
+
+            setTimeout(() => {
+                popup.remove();
+            }, 3000);
+        }
+
+        function addOptionsToDropdown() {
+            const select = document.getElementById('stockSelect');
+            const option = document.createElement('option');
+            option.value = '0DTE';
+            option.text = 'Options (0DTE)';
+            select.appendChild(option);
+        }
+
 
         function showMarginCallPopup() {
             const popup = document.createElement('div');
@@ -302,8 +359,9 @@
 
         function updateCashPosition() {
             const cashDisplay = document.getElementById('cashPosition');
-            cashDisplay.textContent = `Cash: $${cashBalance.toFixed(2)}`;
+            cashDisplay.textContent = `Cash: $${cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             // cashDisplay.style.color = cashBalance >= 1000 ? '#00ff00' : '#ffffff';
+            checkForOptionsUnlock();
             updateButtonStates();
         }
 
@@ -313,7 +371,7 @@
             const currentValue = shares * data.currentPrice;
             const profitLoss = (currentValue - data.totalCost) * leverage;
             const portfolio = document.getElementById('portfolio');
-            portfolio.textContent = `Shares: ${shares} | P/L: ${profitLoss >= 0 ? '+' : ''}$${profitLoss.toFixed(2)}`;
+            portfolio.textContent = `Shares: ${shares} | P/L: ${profitLoss >= 0 ? '+' : ''}$${profitLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             portfolio.style.color = profitLoss >= 0 ? '#00ff00' : '#ff0000';
             updateButtonStates();
         }
@@ -323,14 +381,19 @@
 
             // Randomly trigger special events
             const eventLikelihood = stock === "TSLA" ? 0.03 : stock === "AMZN" ? 0.01 : 0.005
+            const eventDirection = optionsUnlocked ? 0.6 : 0.5
             if (Math.random() < eventLikelihood) { // 0.5% chance of major event
                 data.eventType = Math.random() < 0.5 ? 'crash' : 'boom';
+                console.log(data.eventType);
                 data.eventDuration = Math.floor(Math.random() * 20) + 10; // 10-30 ticks
                 data.eventStrength = (Math.random() * 0.5) + 0.5; // 0.5-1.0 strength
             }
 
+            let baseVolatility = stock === 'BITCOIN' ? 0.13 : 0.04;
+            if (optionsUnlocked) {
+                baseVolatility += 0.02;
+            }
 
-            const baseVolatility = stock === 'BITCOIN' ? 0.13 : 0.04;
             if (!data.momentum) data.momentum = 0;
             data.momentum *= 0.95; // Decay previous momentum
             data.momentum += (Math.random() - 0.5) * 0.1; // Add new momentum
@@ -350,7 +413,7 @@
                 }
             }
             
-            const meanReversionFactor = stock === 'AAPL' ? 0.05 : stock === "GOOGL" ? 0.01 : 0; // Adjust this factor to control mean reversion strength
+            const meanReversionFactor = stock === 'AAPL' ? 0.05 : stock === "GOOGL" ? 0.01 : stock === "BITCOIN" ? 0.001 : 0; // Adjust this factor to control mean reversion strength
             const meanPrice = data.startPrice;
             const newPrice = data.currentPrice * (1 + changePercent) + meanReversionFactor * (meanPrice - data.currentPrice);
             data.currentPrice = Math.max(newPrice, 1);
@@ -364,7 +427,7 @@
             const priceDisplay = document.getElementById('currentPrice');
             const isPositive = newPrice >= stockData[stock].startPrice;
             priceDisplay.style.color = isPositive ? '#00ff00' : '#ff0000';
-            priceDisplay.textContent = `$${newPrice.toFixed(2)}`;
+            priceDisplay.textContent = `$${newPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             // change favicon in head from icons/up/favicon.ico to icons/down/favicon.ico
             const favicons = document.querySelectorAll('link[rel="icon"]');
@@ -457,8 +520,10 @@
                 chart.data.datasets[0].backgroundColor = createGradient(ctx, isPositive);
                 chart.data.datasets[1].data = Array(data.history.length).fill(data.startPrice);
                 const recentHistory = data.history.slice(-50);
-                chart.options.scales.y.min = Math.min(...recentHistory, data.startPrice);
-                chart.options.scales.y.max = Math.max(...recentHistory, data.startPrice);
+                // if bitcoin, set a larger multiplier on that startPrice
+                const multiplier = stock === 'BITCOIN' ? 0.1 : 0.03;
+                chart.options.scales.y.min = Math.min(...recentHistory, data.startPrice * (1 - multiplier));
+                chart.options.scales.y.max = Math.max(...recentHistory, data.startPrice * (1 + multiplier));
                 chart.update();
             }
         }
