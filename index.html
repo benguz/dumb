@@ -400,9 +400,12 @@
 
             // Randomly trigger special events
             const eventLikelihood = stock === "TSLA" ? 0.03 : stock === "AMZN" ? 0.01 : 0.005
-            const eventDirection = optionsUnlocked ? 0.6 : 0.5
-            if (Math.random() < eventLikelihood) { // 0.5% chance of major event
-                data.eventType = Math.random() < 0.5 ? 'crash' : 'boom';
+            let eventDirection = optionsUnlocked ? 0.6 : 0.5
+            if (data.currentPrice < 5) {
+                eventDirection = 0.2;
+            }
+            if (Math.random() < eventLikelihood) {
+                data.eventType = Math.random() < eventDirection ? 'crash' : 'boom';
                 data.eventDuration = Math.floor(Math.random() * 20) + 10; // 10-30 ticks
                 data.eventStrength = (Math.random() * 0.5) + 0.5; // 0.5-1.0 strength
             }
