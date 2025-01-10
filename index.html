@@ -85,6 +85,9 @@
             border: none;
             font-weight: bold;
             transition: opacity 0.2s;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
         }
         .trading-button:active {
             animation: buttonPress 0.1s ease;
@@ -127,6 +130,9 @@
             transform: translate(-50%, -50%);
             background-color: rgba(220, 53, 69, 0.9);
 
+        }
+        .credits {
+            text-align: center; width: 100%; font-size: 10px; color: rgb(240, 240, 240); margin-top: 40px;
         }
         @keyframes popupFade {
             0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
@@ -178,15 +184,16 @@
             }
             body {
                 padding: 0;
+            }
+            .main {
                 display: flex;
                 flex-direction: column-reverse;
             }
             .trading-button {
                 padding: 12px 24px;
             }
-            .popup {
-                text-align: left;
-            }
+            /* .popup {
+            } */
             
         }
     </style>
@@ -194,6 +201,7 @@
     <script defer data-domain="dumbtrading.com" src="https://plausible.io/js/script.js"></script>
 </head>
 <body>
+    <div class="main">
     <div class="controls-row">
         <div class="main-controls" >
             <div style="display: flex; gap: 5px; width: 100%;">   
@@ -227,7 +235,10 @@
     <div id="chartContainer">
         <canvas id="stockChart"></canvas>
     </div>
-
+</div>
+    <div class="credits">
+        inspired by <a href="https://neal.fun" target="_blank" style="color: rgb(240, 240, 240);">neal.fun</a>, made with ❤️ by <a href="https://benguzovsky.com" target="_blank" style="color: rgb(240, 240, 240);">ben</a>
+    </div>
     <script>
         // Generate random starting prices between 100 and 1000
         const APPLPRICE = Math.random() * 100 + 100;
@@ -254,11 +265,13 @@
             return gradient;
         }
 
-        let cashBalance = 1000; // Starting cash position
+        let cashBalance = localStorage.getItem('cashBalance') ? Math.max(1000, localStorage.getItem('cashBalance')) : 1000; // Starting cash position
         let leverage = 1;
-        let leverageUnlocked = false;
-        let optionsUnlocked = false;
-        let marginCallCount = 0;
+        // get this info from local storage
+        let leverageUnlocked = localStorage.getItem('leverageUnlocked') === 'true';
+        let optionsUnlocked = localStorage.getItem('optionsUnlocked') === 'true';
+        let marginCallCount = localStorage.getItem('marginCallCount') || 0;
+        let difficultyLevel = localStorage.getItem('difficultyLevel') || 1;
 
         // Initialize history arrays
         Object.keys(stockData).forEach(stock => {
@@ -277,6 +290,8 @@
         function checkForMarginCall() {
             if (cashBalance < 0) {
                 showMarginCallPopup();
+                marginCallCount++;
+                localStorage.setItem('marginCallCount', marginCallCount);
                 cashBalance = 1000;
                 updateCashPosition();
             }
@@ -285,6 +300,7 @@
         function checkForOptionsUnlock() {
             if (!optionsUnlocked && cashBalance >= 50000) {
                 optionsUnlocked = true;
+                localStorage.setItem('optionsUnlocked', 'true');
                 showOptionsUnlockPopup();
                 addOptionsToDropdown();
             }
@@ -292,7 +308,7 @@
 
         function showOptionsUnlockPopup() {
             const popup = document.createElement('div');
-            popup.innerHTML = '50X RETURN - VOLATILITY INCREASED';
+            popup.innerHTML = '50K RETURN - VOLATILITY INCREASED';
             popup.classList.add('popup');
             popup.style.cssText = `
                 color: white;
@@ -363,6 +379,7 @@
             // cashDisplay.style.color = cashBalance >= 1000 ? '#00ff00' : '#ffffff';
             checkForOptionsUnlock();
             updateButtonStates();
+            localStorage.setItem('cashBalance', cashBalance);
         }
 
         function updatePortfolio() {
@@ -384,7 +401,6 @@
             const eventDirection = optionsUnlocked ? 0.6 : 0.5
             if (Math.random() < eventLikelihood) { // 0.5% chance of major event
                 data.eventType = Math.random() < 0.5 ? 'crash' : 'boom';
-                console.log(data.eventType);
                 data.eventDuration = Math.floor(Math.random() * 20) + 10; // 10-30 ticks
                 data.eventStrength = (Math.random() * 0.5) + 0.5; // 0.5-1.0 strength
             }
@@ -554,6 +570,7 @@
             if (data.shares > 0) {
                 if (!leverageUnlocked) {
                     leverageUnlocked = true;
+                    localStorage.setItem('leverageUnlocked', 'true');
                     document.getElementById('leverageButton').style.display = 'inline-block';
                     document.getElementById('leverageDisplay').style.display = 'inline-block';
                     showLeveragePopup();
