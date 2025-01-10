@@ -29,8 +29,6 @@
             padding: 20px;
         }
 
-        
-        
         #stockSelect {
             padding: 10px;
             font-size: 16px;
@@ -269,6 +267,10 @@
         let leverage = 1;
         // get this info from local storage
         let leverageUnlocked = localStorage.getItem('leverageUnlocked') === 'true';
+        if (leverageUnlocked) {
+            document.getElementById('leverageButton').style.display = 'inline-block';
+            document.getElementById('leverageDisplay').style.display = 'inline-block';
+        }
         let optionsUnlocked = localStorage.getItem('optionsUnlocked') === 'true';
         let marginCallCount = localStorage.getItem('marginCallCount') || 0;
         let difficultyLevel = localStorage.getItem('difficultyLevel') || 1;
