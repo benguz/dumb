@@ -433,8 +433,16 @@
             
             const meanReversionFactor = stock === 'AAPL' ? 0.05 : stock === "GOOGL" ? 0.01 : stock === "BITCOIN" ? 0.001 : 0; // Adjust this factor to control mean reversion strength
             const meanPrice = data.startPrice;
-            const newPrice = data.currentPrice * (1 + changePercent) + meanReversionFactor * (meanPrice - data.currentPrice);
+            let newPrice;
+            if (stock === 'TSLA' || stock === 'AMZN') {
+                const distanceFromMean = (meanPrice - data.currentPrice) / meanPrice;
+                const meanReversionChange = distanceFromMean * meanReversionFactor;
+                newPrice = data.currentPrice * (1 + changePercent + meanReversionChange);
+            } else {
+                newPrice = data.currentPrice * (1 + changePercent) + meanReversionFactor * (meanPrice - data.currentPrice);
+            }
             data.currentPrice = Math.max(newPrice, 1);
+
             
             stockData[stock].history.push(newPrice);
             if (stockData[stock].history.length > 50) {
