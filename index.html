@@ -121,16 +121,20 @@
             min-width: 150px;
         }
 
-        .popup  {
+        .popup {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             background-color: rgba(220, 53, 69, 0.9);
-
+            padding: 20px 40px;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 1000;
         }
         .credits {
-            text-align: center; width: 100%; font-size: 10px; color: rgb(240, 240, 240); margin-top: 40px;
+            text-align: center; width: 95%; font-size: 10px; color: rgb(240, 240, 240); margin: 0 auto; margin-top: 40px;
         }
         @keyframes popupFade {
             0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
@@ -150,6 +154,77 @@
             50% { transform: scale(0.95); }
             100% { transform: scale(1); }
         }
+
+        .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    z-index: 1000;
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #222;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+}
+
+.slider-container {
+    margin: 20px 0;
+}
+
+.slider-container label {
+    display: block;
+    margin-bottom: 10px;
+    color: white;
+}
+
+input[type="range"] {
+    width: 100%;
+    background: #333;
+    height: 8px;
+    border-radius: 4px;
+    -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #ffc107;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#optionsCountdown {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #ffc107;
+    font-size: 14px;
+    z-index: 1;
+}
+
+#optionsProfit {
+    position: absolute;
+    top: 26px;
+    left: 10px;
+    color: white;
+    font-size: 14px;
+    z-index: 1;
+}
+.mobile-only {
+    display: none;
+}
         
         @media screen and (max-width: 768px) {
             .controls-row {
@@ -160,6 +235,13 @@
                 height: 70vh;
                 margin-left: 0;
                 margin-right: 0;
+            }
+            #optionsCountdown {
+                font-size: 16px;
+            }
+            #optionsProfit {
+                top: 29px;
+                font-size: 16px;
             }
             .main-controls {
                 flex-direction: column;
@@ -190,8 +272,30 @@
             .trading-button {
                 padding: 12px 24px;
             }
-            /* .popup {
-            } */
+            .popup {
+                padding: 10px 20px;
+                font-size: 20px;
+            }
+            .desktop-only {
+                display: none;
+            }
+            .mobile-only {
+                display: block;
+            }
+
+            .modal-content {
+                width: 85%;
+                padding: 15px;
+            }
+            
+            input[type="range"] {
+                height: 6px;
+            }
+            
+            input[type="range"]::-webkit-slider-thumb {
+                width: 24px;
+                height: 24px;
+            }
             
         }
     </style>
@@ -203,20 +307,27 @@
     <div class="controls-row">
         <div class="main-controls" >
             <div style="display: flex; gap: 5px; width: 100%;">   
-            <select id="stockSelect">
-                <option value="AAPL">Apple (AAPL)</option>
-                <option value="GOOGL">Google (GOOGL)</option>
-                <option value="TSLA">Tesla (TSLA)</option>
-                <option value="AMZN">Amazon (AMZN)</option>
-                <option value="BITCOIN">Bitcoin (BTC)</option>
-            </select>
-            <div style="display: flex; direction: row; gap: 5px; width: 100%; flex-wrap: wrap;">
-                <button id="buyButton" class="trading-button">Buy</button>
-                <button id="sellButton" class="trading-button">Sell</button>
-                <button id="leverageButton" class="trading-button" style="display: none;">Leverage</button>
-                <p  id="leverageDisplay" style="font-size: 12px; color: white; margin: 0; padding: 0; display: none;">1x</p>
-        </div>
-        </div>
+                <div>
+                    <select id="stockSelect">
+                        <option value="AAPL">Apple (AAPL)</option>
+                        <option value="GOOGL">Google (GOOGL)</option>
+                        <option value="TSLA">Tesla (TSLA)</option>
+                        <option value="AMZN">Amazon (AMZN)</option>
+                        <option value="BITCOIN">Bitcoin (BTC)</option>
+                    </select>
+                    <div class="mobile-only" style="margin-top: 5px;">
+                        <button id="buyCallsButtonMobile" class="trading-button" style="display: none;">Buy Calls</button>
+                        <button id="sellCallsButtonMobile" class="trading-button" style="display: none;">Sell Calls</button>
+                    
+                    </div>
+                </div>
+                <div style="display: flex; direction: row; gap: 5px; width: 100%; flex-wrap: wrap;">
+                    <button id="buyButton" class="trading-button">Buy</button>
+                    <button id="sellButton" class="trading-button">Sell</button>
+                    <button id="leverageButton" class="trading-button" style="display: none;">Leverage</button>
+                    <p  id="leverageDisplay" style="font-size: 12px; color: white; margin: 0; padding: 0; display: none;">1x</p>
+                </div>
+            </div>
             
             <div class="trading-controls">
                 <div id="portfolio">
@@ -234,9 +345,39 @@
         <canvas id="stockChart"></canvas>
     </div>
 </div>
+<div id="optionsModal" class="modal">
+    <div class="modal-content">
+        <h2>0DTE <span id="currentStock"></span> Options</h2>
+        <div class="slider-container">
+            <label>Investment: $<span id="investmentAmount">1000</span></label>
+            <input type="range" id="investmentSlider" min="1" max="100" value="20">
+        </div>
+        <div class="slider-container">
+            <label>Strike Price: $<span id="strikePrice">0</span></label>
+            <input type="range" id="strikeSlider" min="80" max="120" value="100">
+        </div>
+        <div id="contractCount" style="text-align: left; width: 100%; padding-bottom: 10px; display: none;">
+            <p>0 contracts (0 shares)</p>
+        </div>
+        <button id="confirmOptions" class="trading-button">Confirm</button>
+        <div style="text-align: center; width: 100%; padding-top: 10px;">
+            <p style="color: red;">warning: options are for degenerates only</p>
+        </div>
+    </div>
+</div>
+    
+<div class="controls-row desktop-only" style="padding-top: 0;" >
+    <button id="shareButton" class="trading-button" onclick="shareScreenshot('portfolio')">🤳 Share Portfolio Screenshot</button>
+    <button id="buyCallsButton" class="trading-button" style="display: none;">Buy Calls</button>
+    <button id="sellCallsButton" class="trading-button" style="display: none;">Sell Calls</button>
+</div>
+  
     <div class="credits">
+        <button id="shareButtonMobile" style="margin-bottom: 10px;" class="trading-button mobile-only" onclick="shareScreenshot('portfolio')">🤳 Share Portfolio</button>
+
         inspired by <a href="https://neal.fun" target="_blank" style="color: rgb(240, 240, 240);">neal.fun</a>, made with ❤️ by <a href="https://benguzovsky.com" target="_blank" style="color: rgb(240, 240, 240);">ben</a>
     </div>
+
     <script>
         // Generate random starting prices between 100 and 1000
         const APPLPRICE = Math.random() * 100 + 100;
@@ -263,18 +404,39 @@
             return gradient;
         }
 
-        let cashBalance = localStorage.getItem('cashBalance') ? Math.max(1000, localStorage.getItem('cashBalance')) : 1000; // Starting cash position
+        let cashBalance = localStorage.getItem('cashBalance') ? Math.max(1000, parseInt(localStorage.getItem('cashBalance'))) : 1000; // Starting cash position
+        let accountHistory = [cashBalance];
         let leverage = 1;
         // get this info from local storage
-        let leverageUnlocked = localStorage.getItem('leverageUnlocked') === 'true';
+        let leverageUnlocked = localStorage.getItem('leverageUnlocked') ? localStorage.getItem('leverageUnlocked') === 'true' : false;
         if (leverageUnlocked) {
             document.getElementById('leverageButton').style.display = 'inline-block';
             document.getElementById('leverageDisplay').style.display = 'inline-block';
         }
-        let optionsUnlocked = localStorage.getItem('optionsUnlocked') === 'true';
-        let marginCallCount = localStorage.getItem('marginCallCount') || 0;
-        let difficultyLevel = localStorage.getItem('difficultyLevel') || 1;
-
+        let optionsUnlocked = localStorage.getItem('optionsUnlocked') ? localStorage.getItem('optionsUnlocked') === 'true' : false;
+        if (optionsUnlocked) {
+            if (window.innerWidth < 768) {
+                document.getElementById('buyCallsButtonMobile').style.display = 'inline-block';
+                document.getElementById('buyCallsButtonMobile').addEventListener('click', showOptionsModal);
+            } else {
+                document.getElementById('buyCallsButton').style.display = 'inline-block';
+                document.getElementById('buyCallsButton').addEventListener('click', showOptionsModal);
+            }
+            // add event listener to buyCallsButton
+        }
+        let marginCallCount = parseInt(localStorage.getItem('marginCallCount')) || 0;
+        let difficultyLevel = parseInt(localStorage.getItem('difficultyLevel')) || 1;
+        let milestones = localStorage.getItem('milestones') ? JSON.parse(localStorage.getItem('milestones')) : {
+            100000: {reached: false, string: "100K"},
+            1000000: {reached: false, string: "1M"},
+            10000000: {reached: false, string: "10M"},
+            100000000: {reached: false, string: "100M"},
+            1000000000: {reached: false, string: "1B"},
+            10000000000: {reached: false, string: "10B"},
+            100000000000: {reached: false, string: "100B"},
+            1000000000000: {reached: false, string: "1T"},
+        };
+        let shamelessPlug = localStorage.getItem('shamelessPlug') ? localStorage.getItem('shamelessPlug') === 'true' : false;
         // Initialize history arrays
         Object.keys(stockData).forEach(stock => {
             const data = stockData[stock];
@@ -292,7 +454,7 @@
         function checkForMarginCall() {
             if (cashBalance < 0) {
                 showMarginCallPopup();
-                marginCallCount++;
+                marginCallCount++; 
                 localStorage.setItem('marginCallCount', marginCallCount);
                 cashBalance = 1000;
                 updateCashPosition();
@@ -303,24 +465,152 @@
             if (!optionsUnlocked && cashBalance >= 50000) {
                 optionsUnlocked = true;
                 localStorage.setItem('optionsUnlocked', 'true');
-                showOptionsUnlockPopup();
-                addOptionsToDropdown();
+                if (window.innerWidth < 768) {
+                    document.getElementById('buyCallsButtonMobile').style.display = 'inline-block';
+                    document.getElementById('buyCallsButtonMobile').addEventListener('click', showOptionsModal);
+                } else {
+                    document.getElementById('buyCallsButton').style.display = 'inline-block';
+                    document.getElementById('buyCallsButton').addEventListener('click', showOptionsModal);
+                }
             }
         }
 
+        let optionsActive = false;
+        let optionsStrikePrice = 0;
+        let optionsInvestment = 0;
+        let optionsTimeRemaining = 0;
+        let optionsInterval;
+        let trueShareCount = 0;
+
+        function showOptionsModal() {
+            const modal = document.getElementById('optionsModal');
+            const data = stockData[currentStock];
+            const currentPrice = data.currentPrice;
+            
+            // Update strike slider based on current price
+            const strikeSlider = document.getElementById('strikeSlider');
+            strikeSlider.min = Math.floor(currentPrice * 0.8);
+            strikeSlider.max = Math.ceil(currentPrice * 1.2);
+            strikeSlider.value = Math.floor(currentPrice);
+            
+            // Update investment slider based on cash balance
+            const investmentSlider = document.getElementById('investmentSlider');
+            investmentSlider.max = cashBalance;
+            investmentSlider.value = Math.min(cashBalance * 0.2, 100000);
+
+            document.getElementById('currentStock').textContent = currentStock;
+            
+            updateSliderDisplays();
+            modal.style.display = 'block';
+        }
+
+
+        function updateSliderDisplays() {
+            document.getElementById('strikePrice').textContent = 
+                parseFloat(document.getElementById('strikeSlider').value).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            
+            document.getElementById('investmentAmount').textContent = 
+                parseFloat(document.getElementById('investmentSlider').value).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            
+            const strikePrice = parseFloat(document.getElementById('strikeSlider').value);
+            const currentPrice = stockData[currentStock].currentPrice;
+            const investment = parseFloat(document.getElementById('investmentSlider').value);
+            
+            // Calculate time value (using fixed time of 10000 ticks)
+            const timeValue = 0.2; // 20% time premium
+                        
+            // Add volatility premium (higher for OTM options)
+            const volatilityPremium = strikePrice > currentPrice ? 0.5 : 0.25; 
+            
+            // Calculate total premium percentage
+            const premiumPercent = (timeValue + volatilityPremium);
+            
+            // For call options:
+            const intrinsicValue = currentPrice > strikePrice ? Math.max(0.001, currentPrice - strikePrice) / currentPrice : Math.abs(currentPrice - strikePrice) / currentPrice;
+            const timeAndVolValue = strikePrice * premiumPercent;
+            const contractCost = (intrinsicValue + timeAndVolValue) * 100;
+            
+            // Calculate number of contracts investment can buy
+            const numContracts = investment / contractCost;
+            
+            // Display number of contracts
+            document.getElementById('contractCount').textContent = 
+                `${numContracts.toFixed(2)} contract${numContracts !== 1 ? 's' : ''} (${(numContracts * 100).toFixed(2)} shares)`;
+            trueShareCount = numContracts * 100;
+        }
+
+        document.getElementById('strikeSlider').addEventListener('input', updateSliderDisplays);
+        document.getElementById('investmentSlider').addEventListener('input', updateSliderDisplays);
+
+        document.getElementById('confirmOptions').addEventListener('click', () => {
+            optionsStrikePrice = parseFloat(document.getElementById('strikeSlider').value);
+            optionsInvestment = parseFloat(document.getElementById('investmentSlider').value);
+            cashBalance -= optionsInvestment;
+            optionsActive = true;
+            optionsTimeRemaining = 750; // Ticks until expiration
+            
+            document.getElementById('optionsModal').style.display = 'none';
+            // hide the buy calls button
+            document.getElementById('buyCallsButton').style.display = 'none';
+            document.getElementById('buyCallsButtonMobile').style.display = 'none';
+            // show the sell calls button
+            if (window.innerWidth < 768) {
+                document.getElementById('sellCallsButtonMobile').style.display = 'inline-block';
+            } else {
+                document.getElementById('sellCallsButton').style.display = 'inline-block';
+            }
+            
+            // Add countdown display to chart container
+            const countdownDiv = document.createElement('div');
+            countdownDiv.id = 'optionsCountdown';
+            document.getElementById('chartContainer').appendChild(countdownDiv);
+
+            const optionsProfit = document.createElement('div');
+            optionsProfit.id = 'optionsProfit';
+            document.getElementById('chartContainer').appendChild(optionsProfit);
+            
+            updateChart(currentStock);
+            updateCashPosition();
+        });
+
+                
+        function clearOptionsState() {
+            optionsActive = false;
+            optionsStrikePrice = 0;
+            optionsTimeRemaining = 0;
+            trueShareCount = 0;
+            const countdown = document.getElementById('optionsCountdown');
+            if (countdown) countdown.remove();
+            const optionsProfit = document.getElementById('optionsProfit');
+            if (optionsProfit) optionsProfit.remove();
+            clearInterval(optionsInterval);
+            // show the buy calls button
+            // hide the sell calls button
+            if (window.innerWidth < 768) {
+                document.getElementById('sellCallsButtonMobile').style.display = 'none';
+                document.getElementById('buyCallsButtonMobile').style.display = 'inline-block';
+            } else {
+                document.getElementById('sellCallsButton').style.display = 'none';
+                document.getElementById('buyCallsButton').style.display = 'inline-block';
+            }
+
+        }
+
+
         function showOptionsUnlockPopup() {
             const popup = document.createElement('div');
-            popup.innerHTML = '50K RETURN - VOLATILITY INCREASED';
+            popup.innerHTML = '$$$$$$$ VOLATILITY INCREASED';
             popup.classList.add('popup');
             popup.style.cssText = `
                 color: white;
-                padding: 20px 40px;
-                border-radius: 8px;
-                font-size: 24px;
-                font-weight: bold;
                 text-align: center;
                 animation: popupFade 3s forwards, textFlash 0.5s linear infinite;
-                z-index: 1000;
             `;
 
             document.body.appendChild(popup);
@@ -330,32 +620,15 @@
             }, 3000);
         }
 
-        function addOptionsToDropdown() {
-            const select = document.getElementById('stockSelect');
-            const option = document.createElement('option');
-            option.value = '0DTE';
-            option.text = 'Options (0DTE)';
-            select.appendChild(option);
-        }
-
-
         function showMarginCallPopup() {
             const popup = document.createElement('div');
             popup.innerHTML = 'MARGIN CALL IN PROGRESS<br>SELLING 20% OF YOUR SOUL';
+            popup.classList.add('popup');
             popup.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
                 background-color: rgba(220, 53, 69, 0.9);
                 color: white;
-                padding: 20px 40px;
-                border-radius: 8px;
-                font-size: 24px;
-                font-weight: bold;
                 text-align: center;
                 animation: popupFade 3s forwards, textFlash 0.5s linear infinite;
-                z-index: 1000;
             `;
 
             document.body.appendChild(popup);
@@ -393,6 +666,23 @@
             portfolio.textContent = `Shares: ${shares} | P/L: ${profitLoss >= 0 ? '+' : ''}$${profitLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             portfolio.style.color = profitLoss >= 0 ? '#00ff00' : '#ff0000';
             updateButtonStates();
+            accountHistory.push(profitLoss + cashBalance);
+        }
+
+        function showMilestonePopup(milestone, reporting) {
+            const popup = document.createElement('div');
+            popup.innerHTML = `${milestone} RETURN - ${!reporting ? 'FLEX ON THE GROUPCHAT?' : 'DIFFICULTY INCREASED'}`;
+            popup.classList.add('popup');
+            popup.style.cssText = `
+                background-color: rgba(255, 193, 7, 0.9);
+                color: black;
+                text-align: center;
+                animation: popupFade 3s forwards, textFlash 0.5s linear infinite;
+            `;
+            document.body.appendChild(popup);
+            setTimeout(() => {
+                popup.remove();
+            }, 3000);
         }
 
         function updatePrice(stock) {
@@ -548,6 +838,38 @@
                 chart.data.datasets[0].fill = isPositive ? true : 'origin';
                 chart.data.datasets[0].backgroundColor = createGradient(ctx, isPositive);
                 chart.data.datasets[1].data = Array(data.history.length).fill(data.startPrice);
+                if (optionsActive && chart.data.datasets.length < 3) {
+                    chart.data.datasets.push({
+                        label: 'Strike Price',
+                        data: Array(data.history.length).fill(optionsStrikePrice),
+                        borderColor: '#ffc107',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0,
+                        pointRadius: 0
+                    });
+                }
+                if (chart.data.datasets.length > 2 && !optionsActive) {
+                    chart.data.datasets.pop();
+                }
+                if (optionsActive) {
+                    document.getElementById('optionsCountdown').textContent = 
+                        `Option expires in ${optionsTimeRemaining} ticks`;
+                    
+                    const finalPrice = data.currentPrice;
+                    const profit = callProfit(finalPrice, trueShareCount, optionsStrikePrice, optionsInvestment);
+
+                    document.getElementById('optionsProfit').textContent = 
+                        `Options P/L: $${(profit - optionsInvestment).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    if (optionsTimeRemaining <= 0) {
+                        cashBalance += profit;
+                        clearOptionsState();
+                        updateCashPosition();
+                    }
+                    
+                    optionsTimeRemaining--;
+                }
                 const recentHistory = data.history.slice(-50);
                 // if bitcoin, set a larger multiplier on that startPrice
                 const multiplier = stock === 'BITCOIN' ? 0.1 : 0.03;
@@ -594,8 +916,52 @@
                 data.totalCost = (data.shares * data.totalCost) / (data.shares + 1); // Adjust cost basis
                 updatePortfolio();
                 updateCashPosition();
-                checkForMarginCall();  
+                checkForMarginCall();
+                let justReached = false
+                for (let milestone in milestones) {
+                    if (!milestones[milestone].reached && cashBalance >= milestone) {
+                        milestones[milestone].reached = true;
+                        if (!justReached) {
+                            justReached = true;
+                            console.log("shamelessPlug", shamelessPlug);
+                            showMilestonePopup(milestones[milestone].string, shamelessPlug);
+                            localStorage.setItem('milestones', JSON.stringify(milestones));
+                            if (!shamelessPlug) {
+                                setTimeout(() => {
+                                    shareScreenshot("text");
+                                }, 1000);
+                                shamelessPlug = true;
+                                localStorage.setItem('shamelessPlug', 'true');
+                            } else {
+                                difficultyLevel++;
+                                localStorage.setItem('difficultyLevel', difficultyLevel);
+                            }
+                        }
+                    }
+                }
             }
+        });
+
+        function callProfit(price, shares, strike, investment, leverage=1) {
+            const priceDiff = Math.max(0, price - strike);
+            return priceDiff * shares * leverage
+        }
+
+        document.getElementById('sellCallsButton').addEventListener('click', () => {
+            const data = stockData[currentStock];
+            const currentPrice = data.currentPrice;
+            // investment has already been subtracted from cashBalance
+            cashBalance += callProfit(currentPrice, trueShareCount, optionsStrikePrice, optionsInvestment);
+            clearOptionsState();
+            updateCashPosition();
+        });
+        document.getElementById('sellCallsButtonMobile').addEventListener('click', () => {
+            const data = stockData[currentStock];
+            const currentPrice = data.currentPrice;
+            // investment has already been subtracted from cashBalance
+            cashBalance += callProfit(currentPrice, trueShareCount, optionsStrikePrice, optionsInvestment);
+            clearOptionsState();
+            updateCashPosition();
         });
 
         document.getElementById('leverageButton').addEventListener('click', () => {
@@ -611,17 +977,10 @@
 
             const popup = document.createElement('div');
             popup.innerHTML = 'LEVERAGE ENABLED';
+            popup.classList.add('popup');
             popup.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
                 background-color: rgba(255, 193, 7, 0.9);
                 color: black;
-                padding: 20px 40px;
-                border-radius: 8px;
-                font-size: 24px;
-                font-weight: bold;
                 animation: popupFade 2s forwards, textFlash 0.5s linear infinite;
                 z-index: 1000;
             `;
@@ -669,6 +1028,143 @@
         updateChart('AAPL');
         updateCashPosition();
         updateButtonStates();
+
+        function shareScreenshot(text) {
+            const canvas = document.createElement('canvas');
+            if (!navigator.share) {
+                return;
+            }
+
+            // Set canvas dimensions for phone-like aspect ratio
+            canvas.width = 1080;
+            canvas.height = 1920;
+            const ctx = canvas.getContext('2d');
+
+            // Colors
+            const isPositive = accountHistory[accountHistory.length-1] >= accountHistory[0];
+            const graphColor = isPositive ? '#00C805' : '#FF5000'; // Robinhood green/red
+            const bgColor = '#000000';
+            const textColor = '#FFFFFF';
+            const subTextColor = '#8E8E93';
+
+            // Fill background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Add "Investing" header with down carat
+            ctx.fillStyle = textColor;
+            ctx.font = '72px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('Investing', 60, 120);
+            
+            // Add current balance
+            ctx.font = '72px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            const currentBalance = accountHistory[accountHistory.length-1];
+            ctx.fillText(`$${currentBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 60, 210);
+
+            // Add total gain/loss
+            const startValue = accountHistory[0];
+            const totalChange = currentBalance - startValue;
+            const percentChange = ((totalChange / startValue) * 100).toFixed(2);
+            ctx.fillStyle = graphColor;
+            ctx.font = '40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(`${isPositive ? '+' : ''}$${totalChange.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${isPositive ? '+' : ''}${percentChange}%)`, 60, 290);
+
+            // Calculate scaling for graph
+            let padding = {top: 400, bottom: 500, left: 0, right: 0};
+            const graphHeight = canvas.height - padding.top - padding.bottom;
+            const graphWidth = canvas.width - padding.left - padding.right;
+            const minValue = Math.min(...accountHistory);
+            const maxValue = Math.max(...accountHistory);
+            const valueRange = maxValue - minValue;
+
+            // Draw graph
+            ctx.strokeStyle = graphColor;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            for (let i = 0; i < accountHistory.length; i++) {
+                const x = padding.left + (graphWidth / (accountHistory.length - 1)) * i;
+                const y = padding.top + ((maxValue - accountHistory[i]) / valueRange) * graphHeight;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // Add gradient fill under graph
+            const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + graphHeight);
+            gradient.addColorStop(0, isPositive ? 'rgba(0, 200, 5, 0.2)' : 'rgba(255, 80, 0, 0.2)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.lineTo(padding.left + graphWidth, padding.top + graphHeight);
+            ctx.lineTo(padding.left, padding.top + graphHeight);
+            ctx.closePath();
+            ctx.fill();
+
+            // Add time period buttons
+            const periods = ['1D', '1W', '1M', '3M', 'YTD', '1Y', 'ALL'];
+            ctx.font = '40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            const buttonHeight = 60;
+            const buttonWidth = 100;
+            const periodWidth = (graphWidth - 120) / (periods.length - 1);
+            
+            periods.forEach((period, i) => {
+                const x = 60 + periodWidth * i - buttonWidth/2;
+                const y = canvas.height - 320 - buttonHeight/2;
+                
+                if (period === 'ALL') {
+                    // Draw red background for ALL button
+                    ctx.fillStyle = isPositive ? '#00C805' : '#FF5000'; // Robinhood green/red
+
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, buttonWidth, buttonHeight, 15);
+                    ctx.fill();
+                    
+                    // Draw black text for ALL
+                    ctx.fillStyle = '#000000';
+                } else {
+                    // Draw red text for other periods
+                    ctx.fillStyle = isPositive ? '#00C805' : '#FF5000'; // Robinhood green/red
+                }
+                
+                ctx.textAlign = 'center';
+                ctx.fillText(period, x + buttonWidth/2, y + buttonHeight/1.3);
+                ctx.textAlign = 'left';
+            });
+            // Add thin gray line above buying power
+            ctx.strokeStyle = '#333333';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(60, canvas.height - 250);
+            ctx.lineTo(canvas.width - 60, canvas.height - 250);
+            ctx.stroke();
+
+            // Add "Buying Power" section
+            ctx.fillStyle = textColor;
+            ctx.font = '40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(`Buying Power `, 60, canvas.height - 190);
+            ctx.textAlign = 'right';
+            ctx.fillText(`$${cashBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, canvas.width - 60, canvas.height - 190);
+
+            ctx.font = '40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillText('dumbtrading.com', canvas.width - 60, canvas.height - 50);
+
+            // Share the screenshot
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], 'portfolio.png', { type: 'image/png' });
+                try {
+                    await navigator.share({
+                        title: isPositive ? 'Massive Day on the Market' : 'L',
+                        text: isPositive ? 'See you in the rearview mirror of my lambo' : 'fuck.',
+                        files: [file]
+                    });
+                } catch (err) {
+                    console.error('Error sharing:', err);
+                }
+            });
+        }
     </script>
 </body>
 </html>
