@@ -225,6 +225,63 @@ input[type="range"]::-webkit-slider-thumb {
 .mobile-only {
     display: none;
 }
+
+    .floating-message {
+        position: fixed;
+        left: 20px;
+        padding: 10px 15px;
+        background-color: rgba(0, 0, 0, 0.8);
+        border-radius: 8px;
+        color: white;
+        font-size: 14px;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: floatUp 4s ease-out forwards;
+        z-index: 1000;
+        pointer-events: none;
+        bottom: 100px;
+    }
+    @keyframes floatUp {
+        0% {
+        opacity: 0;
+        transform: translateY(0);
+        }
+        4% {
+        opacity: 1;
+        }
+        80% {
+        opacity: 1;
+        }
+        100% {
+        opacity: 0;
+        transform: translateY(-600px);
+        }
+    }
+    @media screen and (max-width: 768px) {
+        .floating-message {
+        font-size: 12px;
+        left: 10px;
+        max-width: 200px;
+        }
+        @keyframes floatUp {
+            0% {
+            opacity: 0;
+            transform: translateY(0);
+            }
+            4% {
+            opacity: 1;
+            }
+            80% {
+            opacity: 1;
+            }
+            100% {
+            opacity: 0;
+            transform: translateY(-600px);
+            }
+        }
+
+    }
+
         
         @media screen and (max-width: 768px) {
             .controls-row {
@@ -372,6 +429,7 @@ input[type="range"]::-webkit-slider-thumb {
     <button id="shareButton" class="trading-button" onclick="shareScreenshot('portfolio')">🤳 Share Portfolio Screenshot</button>
     <button id="buyCallsButton" class="trading-button" style="display: none;">Buy Calls</button>
     <button id="sellCallsButton" class="trading-button" style="display: none;">Sell Calls</button>
+    <button id="sellCallsButton" class="trading-button" style="display: none;">Rug Pull</button>
 </div>
   
     <div class="credits">
@@ -387,12 +445,15 @@ input[type="range"]::-webkit-slider-thumb {
         const TSLAPRICE = Math.random() * 350 + 100;
         const AMZNPRICE = Math.random() * 250 + 100;
         const BITCOINPRICE = Math.random() * 10000 + 10000;
+        const DOGEPRICE = Math.random() * 0.1 + 0.1; // Start DOGE at $0.10-$0.20
+
         const stockData = {
             AAPL: {currentPrice: APPLPRICE, history: [], startPrice: APPLPRICE, shares: 0, totalCost: 0},
             GOOGL: {currentPrice: GOOGLPRICE, history: [], startPrice: GOOGLPRICE, shares: 0, totalCost: 0},
             TSLA: {currentPrice: TSLAPRICE, history: [], startPrice: TSLAPRICE, shares: 0, totalCost: 0},
             AMZN: {currentPrice: AMZNPRICE, history: [], startPrice: AMZNPRICE, shares: 0, totalCost: 0},
-            BITCOIN: {currentPrice: BITCOINPRICE, history: [], startPrice: BITCOINPRICE, shares: 0, totalCost: 0}
+            BITCOIN: {currentPrice: BITCOINPRICE, history: [], startPrice: BITCOINPRICE, shares: 0, totalCost: 0},
+            DOGE: {currentPrice: DOGEPRICE, history: [], startPrice: DOGEPRICE, shares: 0, totalCost: 0, lastBuyTime: 0}
         };
         function createGradient(ctx, isPositive) {
             const gradient = ctx.createLinearGradient(0, 0, 0, 400);
@@ -428,7 +489,9 @@ input[type="range"]::-webkit-slider-thumb {
         }
         let marginCallCount = parseInt(localStorage.getItem('marginCallCount')) || 0;
         let difficultyLevel = parseInt(localStorage.getItem('difficultyLevel')) || 1;
+        let tickSpeed = 100;
         let milestones = localStorage.getItem('milestones') ? JSON.parse(localStorage.getItem('milestones')) : {
+            50000: {reached: false, string: "50K"},
             100000: {reached: false, string: "100K"},
             1000000: {reached: false, string: "1M"},
             10000000: {reached: false, string: "10M"},
@@ -439,6 +502,34 @@ input[type="range"]::-webkit-slider-thumb {
             1000000000000: {reached: false, string: "1T"},
         };
         let shamelessPlug = localStorage.getItem('shamelessPlug') ? localStorage.getItem('shamelessPlug') === 'true' : false;
+        let dogeUnlocked = localStorage.getItem('dogeUnlocked') ? true : false;
+        // Add DOGE to select options when unlocked
+        function checkForDogeUnlock() {
+            if (cashBalance >= 1000000) {
+                dogeUnlocked = true;
+                localStorage.setItem('dogeUnlocked', 'true')
+                const select = document.getElementById('stockSelect');
+                const option = document.createElement('option');
+                option.value = 'DOGE';
+                option.text = 'Dogecoin (DOGE)';
+                select.add(option);
+                
+                // Show unlock popup
+                if (!dogeUnlocked) {
+                    const popup = document.createElement('div');
+                    popup.innerHTML = 'MUCH WOW! DOGE RUGPULLING UNLOCKED!';
+                    popup.classList.add('popup');
+                    popup.style.cssText = `
+                        background-color: rgba(255, 152, 0, 0.9);
+                        color: black;
+                        text-align: center;
+                        animation: popupFade 3s forwards, textFlash 0.5s linear infinite;
+                    `;
+                    document.body.appendChild(popup);
+                    setTimeout(() => popup.remove(), 3000);
+                }
+            }
+        }
         // Initialize history arrays
         Object.keys(stockData).forEach(stock => {
             const data = stockData[stock];
@@ -687,58 +778,87 @@ input[type="range"]::-webkit-slider-thumb {
             }, 3000);
         }
 
+        let lastMessageTime = Date.now();
+        const MESSAGE_INTERVAL = 300;
         function updatePrice(stock) {
             const data = stockData[stock];
-
-            // Randomly trigger special events
-            const eventLikelihood = stock === "TSLA" ? 0.03 : stock === "AMZN" ? 0.01 : 0.005
-            let eventDirection = optionsUnlocked ? 0.6 : 0.5
-            if (data.currentPrice < 5) {
-                eventDirection = 0.2;
-            }
-            if (Math.random() < eventLikelihood) {
-                data.eventType = Math.random() < eventDirection ? 'crash' : 'boom';
-                data.eventDuration = Math.floor(Math.random() * 20) + 10; // 10-30 ticks
-                data.eventStrength = (Math.random() * 0.5) + 0.5; // 0.5-1.0 strength
-            }
-
-            let baseVolatility = stock === 'BITCOIN' ? 0.13 : 0.04;
-            if (optionsUnlocked) {
-                baseVolatility += 0.02;
-            }
-
-            if (!data.momentum) data.momentum = 0;
-            data.momentum *= 0.95; // Decay previous momentum
-            data.momentum += (Math.random() - 0.5) * 0.1; // Add new momentum
-            data.momentum = Math.max(Math.min(data.momentum, 1), -1); // Clamp momentum
-                
-
-            let changePercent = (Math.random() - 0.5 + data.momentum) * baseVolatility;
-            if (data.eventType && data.eventDuration > 0) {
-                if (data.eventType === 'crash') {
-                    changePercent -= data.eventStrength * 0.1;
-                } else { // boom
-                    changePercent += data.eventStrength * 0.1;
-                }
-                data.eventDuration--;
-                if (data.eventDuration <= 0) {
-                    data.eventType = null;
-                }
-            }
-            
-            const meanReversionFactor = stock === 'AAPL' ? 0.05 : stock === "GOOGL" ? 0.01 : stock === "BITCOIN" ? 0.001 : 0; // Adjust this factor to control mean reversion strength
-            const meanPrice = data.startPrice;
             let newPrice;
-            if (stock === 'TSLA' || stock === 'AMZN') {
-                const distanceFromMean = (meanPrice - data.currentPrice) / meanPrice;
-                const meanReversionChange = distanceFromMean * meanReversionFactor;
-                newPrice = data.currentPrice * (1 + changePercent + meanReversionChange);
-            } else {
-                newPrice = data.currentPrice * (1 + changePercent) + meanReversionFactor * (meanPrice - data.currentPrice);
-            }
-            data.currentPrice = Math.max(newPrice, 1);
+            if (stock === 'DOGE') {
+                // DOGE-specific price manipulation
+                const currentTime = Date.now();
+                const timeSinceLastBuy = currentTime - data.lastBuyTime;
+                const holdingPressure = Math.max(0, Math.min(1, (timeSinceLastBuy - 400) / 60000)); // No pressure for first 500ms, then max after 60s
+                let changePercent;
+                if (data.shares > 0) {
+                    // When holding, price gradually increases for first 500 ticks then small random movements
+                    changePercent = timeSinceLastBuy - 400 > 0 ? -0.05 * holdingPressure : (Math.random() - (0.2 * timeSinceLastBuy / 150)) * 0.2;
+                } else {
+                    // When not holding, small random movements
+                    changePercent = (Math.random() - 0.5) * 0.002;
+                }
+                
+                if (currentTime - lastMessageTime >= MESSAGE_INTERVAL && data.shares > 0) {
+                    // Compare current price with previous price to determine direction
+                    const previousPrice = data.history[data.history.length - 20];
+                    const currentPrice = data.history[data.history.length - 1];
+                    if (Math.abs(currentPrice - previousPrice) > 0.10 || currentTime - lastMessageTime >= MESSAGE_INTERVAL * 1.5) {
+                        showFloatingMessage(currentPrice > previousPrice);
+                        lastMessageTime = currentTime;
+                    }
+                    
+                }
 
-            
+                newPrice = Math.max(0.00001, data.currentPrice * (1 + changePercent));
+                data.currentPrice = newPrice;
+            } else {
+                // Randomly trigger special events
+                const eventLikelihood = stock === "TSLA" ? 0.03 : stock === "AMZN" ? 0.01 : 0.005
+                let eventDirection = optionsUnlocked ? 0.6 : 0.5
+                if (data.currentPrice < 5) {
+                    eventDirection = 0.2;
+                }
+                if (Math.random() < eventLikelihood) {
+                    data.eventType = Math.random() < eventDirection ? 'crash' : 'boom';
+                    data.eventDuration = Math.floor(Math.random() * 20) + 10; // 10-30 ticks
+                    data.eventStrength = (Math.random() * 0.5) + 0.5; // 0.5-1.0 strength
+                }
+
+                let baseVolatility = stock === 'BITCOIN' ? 0.13 : 0.04;
+                if (optionsUnlocked) {
+                    baseVolatility += 0.02;
+                }
+
+                if (!data.momentum) data.momentum = 0;
+                data.momentum *= 0.95; // Decay previous momentum
+                data.momentum += (Math.random() - 0.5) * 0.1; // Add new momentum
+                data.momentum = Math.max(Math.min(data.momentum, 1), -1); // Clamp momentum
+
+
+                let changePercent = (Math.random() - 0.5 + data.momentum) * baseVolatility;
+                if (data.eventType && data.eventDuration > 0) {
+                    if (data.eventType === 'crash') {
+                        changePercent -= data.eventStrength * 0.1;
+                    } else { // boom
+                        changePercent += data.eventStrength * 0.1;
+                    }
+                    data.eventDuration--;
+                    if (data.eventDuration <= 0) {
+                        data.eventType = null;
+                    }
+                }
+                
+                const meanReversionFactor = stock === 'AAPL' ? 0.05 : stock === "GOOGL" ? 0.01 : stock === "BITCOIN" ? 0.001 : 0; // Adjust this factor to control mean reversion strength
+                const meanPrice = data.startPrice;
+                if (stock === 'TSLA' || stock === 'AMZN') {
+                    const distanceFromMean = (meanPrice - data.currentPrice) / meanPrice;
+                    const meanReversionChange = distanceFromMean * meanReversionFactor;
+                    newPrice = data.currentPrice * (1 + changePercent + meanReversionChange);
+                } else {
+                    newPrice = data.currentPrice * (1 + changePercent) + meanReversionFactor * (meanPrice - data.currentPrice);
+                }
+                data.currentPrice = Math.max(newPrice, 1);
+            }
+
             stockData[stock].history.push(newPrice);
             if (stockData[stock].history.length > 50) {
                 stockData[stock].history.shift();
@@ -770,6 +890,77 @@ input[type="range"]::-webkit-slider-thumb {
             
             updatePortfolio();
         }
+
+        const bullishMessages = [
+            "🚀 To the moon!",
+            "💎 Diamond hands!",
+            "Apes together strong 🦍🦍🦍",
+            "📈 Stonks",
+            "🤑 Money printer go brrr",
+            "HODLHODLHODLHODL",
+            "mom look it's green",
+            "lambo time",
+            "buy buy buy buy",
+            "this is a pyramid scheme but I am the pointy tip",
+            "PUMP PUMP PUMP!",
+            "#SHITCOIN LOVE IT BABY",
+            "FINALLY QUITTING WENDYS",
+            "HARAMBE IS SMILING ON US RN",
+            "💰💰💰",
+            "chat i was here ",
+            "this only goes up, right?",
+            "this is never gonna stop",
+            "this feels better than spending my stimmie check on the petting zoo",
+            "i wish my parole officer could see me now",
+            "grandma I won your inheritance back",
+            "doubling down rq",
+        ];
+        const bearishMessages = [
+            "WAIT SHIT SELL SELL SELL",
+            "💸 There goes my rent",
+            "🤡🤡🤡",
+            "🧻 Paper hands",
+            "😭😭 I should've listened to my dad",
+            "RIP",
+            "bag holders put your hands up 🙋🙋",
+            "... fuck. sell.",
+            "If I turn my phone off and back on, will the losses go away",
+            "🏳️ Buy high sell low",
+            "Just pooped what did I miss",
+            "is somebody rugging this???",
+            "Jim Cramer says to buy, I'm out",
+            "idk about this anymore",
+            "selling if this goes any lower",
+            "Sir, this is a Wendys",
+            "🆘 who pumped and dumped this",
+            "where is obamacare when you need it",
+            "GUYS GET OUT BEFORE IT'S TOO LATE",
+            "just sold",
+            "nah bro just nah, not touching this",
+            "call me mr. money destroyer the way my cash be burning",
+            "gonna need to do insurance fraud to make up this L",
+            "AAAAH MONEY ON FIRE",
+            "SELL PLZ"
+        ];
+        
+        function showFloatingMessage(isPositive) {
+            const messages = isPositive ? bullishMessages : bearishMessages;
+            const message = messages[Math.floor(Math.random() * messages.length)];
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('floating-message');
+            messageElement.textContent = message;
+            // Calculate position based on existing messages
+            const existingMessages = document.querySelectorAll('.floating-message');
+            const basePosition = window.innerHeight - 100;
+            const offset = existingMessages.length * 5;
+            messageElement.style.bottom = `${100 - offset}px`;
+            document.body.appendChild(messageElement);
+            // Remove the message after animation completes
+            setTimeout(() => {
+                messageElement.remove();
+            }, 4000);
+        }
+
 
         function updateChart(stock) {
             const ctx = document.getElementById('stockChart').getContext('2d');
@@ -888,13 +1079,38 @@ input[type="range"]::-webkit-slider-thumb {
                 chart = null;
             }
             updateChart(currentStock);
+            console.log(currentStock)
+            if (currentStock === 'DOGE') {
+                document.getElementById('buyButton').textContent = "BULK BUY"
+                document.getElementById('sellButton').textContent = "BULK SELL"
+            } else {
+                document.getElementById('buyButton').textContent = "Buy"
+                document.getElementById('sellButton').textContent = "Sell"
+            }
             updatePortfolio();
         });
 
         document.getElementById('buyButton').addEventListener('click', () => {
             const data = stockData[currentStock];
-            if (cashBalance >= data.currentPrice) {
-                data.shares++;
+            if (currentStock === 'DOGE') {
+                if (cashBalance >= (data.currentPrice * 10000)) {
+                    data.shares = data.shares + 10000;
+                    data.totalCost += data.currentPrice * 10000;
+                    cashBalance -= data.currentPrice * 10000;
+                    if (currentStock === 'DOGE') {
+                        data.lastBuyTime = Date.now();
+                        data.currentPrice *= 1.05;
+                        stockData[currentStock].history.push(data.currentPrice);
+                        if (stockData[currentStock].history.length > 50) {
+                            stockData[currentStock].history.shift();
+                        }
+                    }
+                    updatePortfolio();
+                    updateCashPosition();
+                }
+                
+            } else if (cashBalance >= data.currentPrice) {
+                data.shares++
                 data.totalCost += data.currentPrice;
                 cashBalance -= data.currentPrice;
                 updatePortfolio();
@@ -912,10 +1128,23 @@ input[type="range"]::-webkit-slider-thumb {
                     document.getElementById('leverageDisplay').style.display = 'inline-block';
                     showLeveragePopup();
                 }
-                data.shares--;
-                const sellValue = data.currentPrice + ((data.currentPrice - (data.totalCost / (data.shares + 1))) * (leverage - 1));
-                cashBalance += sellValue;
-                data.totalCost = (data.shares * data.totalCost) / (data.shares + 1); // Adjust cost basis
+                if (currentStock === 'DOGE') {
+                    const sharesToSell = Math.min(10000, data.shares);
+                    data.shares -= sharesToSell;
+                    const sellValue = data.currentPrice + ((data.currentPrice - (data.totalCost / (data.shares + sharesToSell))) * (leverage - 1));
+                    cashBalance += sellValue * sharesToSell;
+                    data.totalCost = (data.shares * data.totalCost) / (data.shares + sharesToSell);
+                    data.currentPrice *= (0.85 - (Math.random() * 0.1)); // Price drops 15% on sell
+                    stockData[currentStock].history.push(data.currentPrice);
+                    if (stockData[currentStock].history.length > 50) {
+                        stockData[currentStock].history.shift();
+                    }
+                } else {
+                    data.shares--;
+                    const sellValue = data.currentPrice + ((data.currentPrice - (data.totalCost / (data.shares + 1))) * (leverage - 1));
+                    cashBalance += sellValue;
+                    data.totalCost = (data.shares * data.totalCost) / (data.shares + 1); // Adjust cost basis
+                }
                 updatePortfolio();
                 updateCashPosition();
                 checkForMarginCall();
@@ -925,18 +1154,23 @@ input[type="range"]::-webkit-slider-thumb {
                         milestones[milestone].reached = true;
                         if (!justReached) {
                             justReached = true;
-                            console.log("shamelessPlug", shamelessPlug);
-                            showMilestonePopup(milestones[milestone].string, shamelessPlug);
+                            firstMileStone = milestones[milestone].string === "50K";
+                            showMilestonePopup(milestones[milestone].string, (shamelessPlug || firstMileStone));
                             localStorage.setItem('milestones', JSON.stringify(milestones));
-                            if (!shamelessPlug) {
+                            if (!shamelessPlug && !firstMileStone) {
                                 setTimeout(() => {
                                     shareScreenshot("text");
                                 }, 1700); 
                                 shamelessPlug = true;
                                 localStorage.setItem('shamelessPlug', 'true');
-                            } else {
+                            } else if (milestones[milestone].string === "1M") {
+                                checkForDogeUnlock();
                                 difficultyLevel++;
                                 localStorage.setItem('difficultyLevel', difficultyLevel);
+                            } {
+                                difficultyLevel++;
+                                localStorage.setItem('difficultyLevel', difficultyLevel);
+                                startGameLoop();
                             }
                         }
                     }
@@ -1021,16 +1255,31 @@ input[type="range"]::-webkit-slider-thumb {
             }, 2000);
         }
 
+        let gameInterval;
+
+        function startGameLoop() {
+            // Clear any existing interval
+            if (gameInterval) {
+                clearInterval(gameInterval);
+            }
+            
+            // Create new interval with updated timing
+            gameInterval = setInterval(() => {
+                updatePrice(currentStock);
+                updateChart(currentStock);
+            }, tickSpeed - (Math.min(90, difficultyLevel * 10)));
+        }
+
         // Update prices and chart every 100ms for smoother animation
-        setInterval(() => {
-            updatePrice(currentStock);
-            updateChart(currentStock);
-        }, 100);
+        startGameLoop();        
+        console.log("difficultyLevel", difficultyLevel)
 
         // Initial setup
         updateChart('AAPL');
         updateCashPosition();
         updateButtonStates();
+
+        checkForDogeUnlock();
 
         function shareScreenshot(text) {
             const canvas = document.createElement('canvas');
