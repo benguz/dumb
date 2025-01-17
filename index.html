@@ -506,7 +506,6 @@ input[type="range"]::-webkit-slider-thumb {
         // Add DOGE to select options when unlocked
         function checkForDogeUnlock() {
             if (cashBalance >= 1000000) {
-                dogeUnlocked = true;
                 localStorage.setItem('dogeUnlocked', 'true')
                 const select = document.getElementById('stockSelect');
                 const option = document.createElement('option');
@@ -516,6 +515,7 @@ input[type="range"]::-webkit-slider-thumb {
                 
                 // Show unlock popup
                 if (!dogeUnlocked) {
+                    dogeUnlocked = true;
                     const popup = document.createElement('div');
                     popup.innerHTML = 'MUCH WOW! DOGE RUGPULLING UNLOCKED!';
                     popup.classList.add('popup');
