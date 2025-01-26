@@ -134,7 +134,7 @@
             z-index: 1000;
         }
         .credits {
-            text-align: center; width: 95%; font-size: 10px; color: rgb(240, 240, 240); margin: 0 auto; margin-top: 40px;
+            text-align: center; width: 95%; font-size: 10px; color: rgb(240, 240, 240); margin: 0 auto; margin-top: 40px; margin-bottom: 4px;
         }
         @keyframes popupFade {
             0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
@@ -226,6 +226,26 @@ input[type="range"]::-webkit-slider-thumb {
     display: none;
 }
 
+.close-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #666;
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 24px;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+    border-radius: 50%;
+    transition: color 0.2s;
+}
+
+.close-icon:hover {
+    color: #fff;
+}
+
+
     .floating-message {
         position: fixed;
         left: 20px;
@@ -294,21 +314,44 @@ input[type="range"]::-webkit-slider-thumb {
                 margin-right: 0;
             }
             #optionsCountdown {
-                font-size: 16px;
+                font-size: 14px;
+                position: relative;
+                top: unset;
+                left: unset;
             }
             #optionsProfit {
-                top: 29px;
-                font-size: 16px;
+                font-size: 14px;
+                position: relative;
+                top: unset;
+                left: unset;
+            }
+            .close-icon {
+                top: 8px;
+                right: 8px;
+                font-size: 20px;
             }
             .main-controls {
                 flex-direction: column;
             }
             .trading-controls {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background-color: rgba(0, 0, 0, 0.9);
+                border: 2px solid #333;
+                border-radius: 8px;
+                padding: 8px 12px;
+                z-index: 1000;
                 flex-direction: column;
-                text-align: left;
-                width: 100%;
+                gap: 4px;
+                width: 50vw;
                 align-items: flex-start;
             }
+            #portfolio, #cashPosition {
+                font-size: 14px;
+                min-width: unset;
+            }
+
             .controls-row {
                 padding: 0;
                 padding-top: 10px;
@@ -388,7 +431,7 @@ input[type="range"]::-webkit-slider-thumb {
                 </div>
             </div>
             
-            <div class="trading-controls">
+            <div id="tradingControls" class="trading-controls">
                 <div id="portfolio">
                     Shares: 0 | P/L: $0.00
                 </div>
@@ -406,6 +449,7 @@ input[type="range"]::-webkit-slider-thumb {
 </div>
 <div id="optionsModal" class="modal">
     <div class="modal-content">
+        <div class="close-icon" onclick="closeOptionsModal()">×</div>
         <h2>0DTE <span id="currentStock"></span> Options</h2>
         <div class="slider-container">
             <label>Investment: $<span id="investmentAmount">1000</span></label>
@@ -597,6 +641,9 @@ input[type="range"]::-webkit-slider-thumb {
             modal.style.display = 'block';
         }
 
+        function closeOptionsModal() {
+            document.getElementById('optionsModal').style.display = 'none';
+        }
 
         function updateSliderDisplays() {
             document.getElementById('strikePrice').textContent = 
@@ -662,11 +709,21 @@ input[type="range"]::-webkit-slider-thumb {
             // Add countdown display to chart container
             const countdownDiv = document.createElement('div');
             countdownDiv.id = 'optionsCountdown';
-            document.getElementById('chartContainer').appendChild(countdownDiv);
+            // if mobile, append to trading controls
+            if (window.innerWidth < 768) {
+                document.getElementById('tradingControls').appendChild(countdownDiv);
+            } else {
+                document.getElementById('chartContainer').appendChild(countdownDiv);
+            }
 
             const optionsProfit = document.createElement('div');
             optionsProfit.id = 'optionsProfit';
-            document.getElementById('chartContainer').appendChild(optionsProfit);
+            // if mobile, append to trading controls
+            if (window.innerWidth < 768) {
+                document.getElementById('tradingControls').appendChild(optionsProfit);
+            } else {
+                document.getElementById('chartContainer').appendChild(optionsProfit);
+            }
             
             updateChart(currentStock);
             updateCashPosition();
@@ -1172,6 +1229,8 @@ input[type="range"]::-webkit-slider-thumb {
                                 localStorage.setItem('difficultyLevel', difficultyLevel);
                                 startGameLoop();
                             }
+                        } else {
+                            checkForDogeUnlock();
                         }
                     }
                 }
